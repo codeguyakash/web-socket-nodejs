@@ -1,13 +1,14 @@
-const WebSocket = require('ws');
 const express = require('express');
+const WebSocket = require('ws');
+const http = require('http');
+const deviceRoutes = require('./routes/device.routes');
 
 const app = express();
 const port = 3000;
-const wsPort = 8080;
 
-const wss = new WebSocket.Server({ port: wsPort });
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
 
-console.log(`WebSocket server started on ws://localhost:${wsPort}`);
 
 function broadcast(message) {
     wss.clients.forEach((client) => {
@@ -19,12 +20,11 @@ function broadcast(message) {
 
 wss.on('connection', (ws) => {
     console.log('Client connected');
-
     ws.send('Welcome to the WebSocket server!');
+    console.log(ws);
 
     ws.on('message', (message) => {
         console.log(`Received from client: ${message}`);
-
         if (message === '@codeguyakash') {
             console.log('Sending screenshot capture instruction');
             ws.send('capture_screenshot');
@@ -38,15 +38,16 @@ wss.on('connection', (ws) => {
     ws.on('error', (error) => {
         console.error('WebSocket error:', error);
     });
+});
 
+app.use(deviceRoutes);
 
-    app.get('/capture_screenshot', (req, res) => {
-        console.log('API endpoint hit: Triggering screenshot capture');
-        broadcast('capture_screenshot');
-        res.status(200).json({ message: 'Screenshot capture instruction sent to clients.' });
-    });
+app.get('/capture_screenshot', (req, res) => {
+    broadcast('capture_screenshot');
+    res.status(200).json({ message: 'Screenshot Captured' });
+});
+
+server.listen(port, () => {
+    console.log(`WebSocket 🔌 and Express ⚙️ Server running at: 👉 http://localhost:${port} 🖥️`);
 
 });
-app.listen(port, () => {
-    console.log(`Express server running on http://localhost:${port}`);
-})
