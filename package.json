@@ -4,7 +4,8 @@
   "description": "README.me",
   "main": "index.js",
   "scripts": {
-    "start": "node --watch index.js"
+    "start": "node --watch index.js",
+    "dev": "node --watch server.js"
   },
   "keywords": [],
   "author": "",

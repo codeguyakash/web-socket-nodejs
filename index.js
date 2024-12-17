@@ -21,7 +21,7 @@ function broadcast(message) {
 wss.on('connection', (ws) => {
     console.log('Client connected');
     ws.send('Welcome to the WebSocket server!');
-    console.log(ws);
+    // console.log(ws);
 
     ws.on('message', (message) => {
         console.log(`Received from client: ${message}`);
