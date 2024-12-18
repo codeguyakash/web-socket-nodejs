@@ -4,7 +4,7 @@
   "description": "README.me",
   "main": "index.js",
   "scripts": {
-    "start": "node --env-file=.env --watch index.js",
+    "start": "node --env-file=.env --watch server.js",
     "dev": "node --env-file=.env --watch server.js"
   },
   "keywords": [],
