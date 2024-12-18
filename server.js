@@ -101,7 +101,8 @@ app.get('/get_screenshot', async (req, res) => {
 
     try {
         const file = await getFileAfterUpload();
-        const path = `http://localhost:${port}/uploads/${file}`;
+        // const path = `http://localhost:${port}/uploads/${file}`;
+        const path = `https://web-socket-nodejs-gkgu.onrender.com/uploads/${file}`;
         res.status(200).json({ message: 'Screenshot requested', fileName: path });
     } catch (error) {
         console.error('Error getting screenshot:', error);
