@@ -1,21 +1,31 @@
+require("dotenv").config();
 const http = require('http');
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const WebSocket = require('ws');
+const connectDB = require('./db/database');
 
 const app = express();
 const port = 3000;
-
-// Create HTTP server
+let databaseInstance;
 const server = http.createServer(app);
 
-// Attach WebSocket server to the HTTP server
 const wss = new WebSocket.Server({ server });
+
+let pool;
+
+(async () => {
+  try {
+    pool = await connectDB();
+  } catch (error) {
+    console.error("Failed to initialize database connection", error.message);
+    process.exit(1);
+  }
+})();
 
 console.log(`WebSocket and Express server running on http://localhost:${port}`);
 
-// Function to broadcast messages to all connected WebSocket clients
 function broadcast(message) {
     wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
@@ -23,8 +33,8 @@ function broadcast(message) {
         }
     });
 }
+console.log("object");
 
-// Multer storage configuration for file uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, path.join(__dirname, '/uploads'));
@@ -37,7 +47,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// WebSocket connection logic
 wss.on('connection', (ws) => {
     console.log('Client connected');
     ws.send('Welcome to the WebSocket server!');
@@ -59,9 +68,14 @@ wss.on('connection', (ws) => {
     });
 });
 
-// Express API routes
-app.get("/", (req, res) => {
-    res.json({ message: "Welcome to Express and WebSocket Server!" });
+app.get("/", async (_, res)  => {
+    try {
+        const [rows] = await pool.query("SELECT * FROM device");
+        res.status(200).json({ success: true, data: rows });
+      } catch (error) {
+        console.error("Error executing query:", error.message);
+        res.status(500).json({ error: "Database query failed." });
+      }
 });
 
 app.get('/capture_screenshot', (req, res) => {
@@ -73,8 +87,6 @@ app.get('/capture_screenshot', (req, res) => {
 app.post('/upload', upload.single('file'), (req, res) => {
     try {
         const file = req.file;
-
-        // console.log(file);
 
         if (!file) {
             return res.status(400).json({ message: 'No file uploaded' });
@@ -92,7 +104,6 @@ app.post('/upload', upload.single('file'), (req, res) => {
     }
 });
 
-// Start the server with Express and WebSocket on the same port
 server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
 });
