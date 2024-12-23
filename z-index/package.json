@@ -4,9 +4,8 @@
   "description": "README.me",
   "main": "index.js",
   "scripts": {
-    "start": "node --env-file=.env --watch index.js",
-    "dev": "node --env-file=.env --watch index.js",
-    "prod": "node --env-file=.env --watch app.js"
+    "start": "node --env-file=.env --watch server.js",
+    "dev": "node --env-file=.env --watch server.js"
   },
   "keywords": [],
   "author": "",

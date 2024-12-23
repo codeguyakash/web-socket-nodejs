@@ -1,11 +1,24 @@
-const router = require('express').Router();
-const { uploadHandler, index } = require('../controllers/device.controller');
-const upload = require('../middleware/multer.middleware');
+const express = require('express');
+const upload = require('../middleware/upload.middleware');
+const {
+    getDevices,
+    rebootDevice,
+    restartApp,
+    captureScreenshot,
+    getScreenshot,
+    uploadFile,
+} = require('../controllers/device.controller');
 
-// Route to handle the index endpoint
-router.get('/', index);
+const { streamVideo } = require('../controllers/stream.controller');
 
-// Route to handle file uploads
-router.post('/upload', upload.single('file'), uploadHandler);
+const router = express.Router();
+
+router.get('/', getDevices);
+router.post('/reboot', rebootDevice);
+router.post('/restart_app', restartApp);
+router.get('/capture_screenshot', captureScreenshot);
+router.get('/get_screenshot', getScreenshot);
+router.post('/upload', upload.single('file'), uploadFile);
+router.get("/video-stream", streamVideo);
 
 module.exports = router;

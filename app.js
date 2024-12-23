@@ -6,31 +6,27 @@ const path = require('path');
 const WebSocket = require('ws');
 const connectDB = require('./db/database');
 const fs = require("fs");
+// const { router } = require("./routes/device");
 
 const app = express();
-const port = 3000;
+const PORT = process.env.PORT || 4200;
 const server = http.createServer(app);
-let isUploadedImage = false;
+app.use(express.json());
+// app.use(router);
 
 const wss = new WebSocket.Server({ server });
 
 let pool;
 
-(async () => {
-    try {
-        pool = await connectDB();
-    } catch (error) {
-        console.error("Failed to initialize database connection", error.message);
-        process.exit(1);
-    }
-})();
+const URL = process.env.LIVE_URL ?? 'http://localhost:4200';
 
-console.log(`WebSocket and Express server running on http://localhost:${port}`);
+console.log(`WebSocket and Express server running on http://localhost:${PORT}`);
 
 function broadcast(message) {
     wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
             client.send(message);
+
         }
     });
 }
@@ -62,9 +58,14 @@ wss.on('connection', (ws, req) => {
         }
     });
     ws.on("screenshot_uploaded", (message) => {
-        console.log('Screenshot Captured Acknowledged', message);
+        console.log('Screenshot', message);
     });
-
+    ws.on("restart_app", (message) => {
+        console.log('restart_app', message);
+    });
+    ws.on("reboot", (message) => {
+        console.log('reboot', message);
+    });
     ws.on('close', () => {
         console.log('Client disconnected');
     });
@@ -73,7 +74,6 @@ wss.on('connection', (ws, req) => {
         console.error('WebSocket error:', error);
     });
 });
-
 app.get("/", async (_, res) => {
     try {
         const [rows] = await pool.query("SELECT * FROM device");
@@ -89,10 +89,13 @@ app.post("/reboot", async (req, res) => {
     broadcast(`reboot`);
     res.status(200).json({ message: `Rebooting device` });
 });
+app.post("/restart_app", async (req, res) => {
+    broadcast(`restart_app`);
+    res.status(200).json({ message: `Restart App Success` });
+});
 
 
 app.get('/capture_screenshot', async (req, res) => {
-    console.log('Triggering screenshot capture');
     broadcast('capture_screenshot');
     res.status(200).json({ message: 'Screenshot capture triggered' });
 });
@@ -101,9 +104,8 @@ app.get('/get_screenshot', async (req, res) => {
 
     try {
         const file = await getFileAfterUpload();
-        // const path = `http://localhost:${port}/uploads/${file}`;
-        const path = `https://web-socket-nodejs-gkgu.onrender.com/uploads/${file}`;
-        res.status(200).json({ message: 'Screenshot requested', fileName: path });
+        const filePath = `${URL}/uploads/${file}`;
+        res.status(200).json({ message: 'Screenshot requested', fileName: filePath });
     } catch (error) {
         console.error('Error getting screenshot:', error);
         res.status(500).json({ message: 'Internal server error', error });
@@ -143,6 +145,19 @@ app.post('/upload', upload.single('file'), (req, res) => {
     }
 });
 
-server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
-});
+
+(async () => {
+    try {
+        const pool = await connectDB();
+
+        server.listen(PORT, () => {
+            console.log(`Server running on http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error.message);
+        process.exit(1);
+    }
+})();
+
+
+
