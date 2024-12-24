@@ -97,8 +97,39 @@ app.post("/restart_app", async (req, res) => {
 
 app.get('/capture_screenshot', async (req, res) => {
     broadcast('capture_screenshot');
+
+    
+
+
+
+
+
+
+
     res.status(200).json({ message: 'Screenshot capture triggered' });
 });
+
+app.post('/upload', upload.single('file'), (req, res) => {
+    try {
+        const file = req.file;
+        if (!file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        console.log(`File uploaded: ${file.filename}`);
+        isUploadedImage = true;
+        res.status(200).json({
+            message: 'File uploaded successfully',
+            fileName: file.filename,
+            filePath: `/uploads/${file.filename}`,
+        });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ message: 'Internal server error', error });
+    }
+});
+
+
 app.get('/get_screenshot', async (req, res) => {
     console.log('Requesting screenshot');
 
@@ -125,25 +156,7 @@ getFileAfterUpload = async () => {
     return file;
 }
 
-app.post('/upload', upload.single('file'), (req, res) => {
-    try {
-        const file = req.file;
-        if (!file) {
-            return res.status(400).json({ message: 'No file uploaded' });
-        }
 
-        console.log(`File uploaded: ${file.filename}`);
-        isUploadedImage = true;
-        res.status(200).json({
-            message: 'File uploaded successfully',
-            fileName: file.filename,
-            filePath: `/uploads/${file.filename}`,
-        });
-    } catch (error) {
-        console.error('Upload error:', error);
-        res.status(500).json({ message: 'Internal server error', error });
-    }
-});
 
 
 (async () => {
