@@ -9,35 +9,32 @@ const fs = require("fs");
 const cors = require('cors')
 // const { router } = require("./routes/device");
 
+const URL = process.env.LIVE_URL ?? 'http://localhost:4200';
 const app = express();
 const PORT = process.env.PORT || 4200;
 const server = http.createServer(app);
 app.use(express.json());
 app.use(cors())
-// app.use(router);
 
 const wss = new WebSocket.Server({ server });
-
-
-function formatDate(date) {
-    const month = date.getMonth() + 1;  // getMonth() is zero-based, so add 1
-    const day = date.getDate();
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');  // Adds leading zero if single digit
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-
-    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
-}
-
+const uploadDir = path.join(__dirname, "/uploads");
 const currentDate = new Date();
 let date = formatDate(currentDate);
 console.log(date)
 
-
 let pool;
 
-const URL = process.env.LIVE_URL ?? 'http://localhost:4200';
+function formatDate(date) {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
+}
+
+
 
 console.log(`WebSocket and Express server running on http://localhost:${PORT}`);
 
@@ -51,9 +48,16 @@ function broadcast(message) {
 }
 let isCaptured = false
 
+
+
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    console.log("📁 Uploads folder created automatically.");
+}
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '/uploads'));
+        cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
