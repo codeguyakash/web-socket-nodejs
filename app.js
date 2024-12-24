@@ -6,15 +6,34 @@ const path = require('path');
 const WebSocket = require('ws');
 const connectDB = require('./db/database');
 const fs = require("fs");
+const cors = require('cors')
 // const { router } = require("./routes/device");
 
 const app = express();
 const PORT = process.env.PORT || 4200;
 const server = http.createServer(app);
 app.use(express.json());
+app.use(cors())
 // app.use(router);
 
 const wss = new WebSocket.Server({ server });
+
+
+function formatDate(date) {
+    const month = date.getMonth() + 1;  // getMonth() is zero-based, so add 1
+    const day = date.getDate();
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');  // Adds leading zero if single digit
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds}`;
+}
+
+const currentDate = new Date();
+let date = formatDate(currentDate);
+console.log(date)
+
 
 let pool;
 
@@ -30,6 +49,7 @@ function broadcast(message) {
         }
     });
 }
+let isCaptured = false
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -52,6 +72,13 @@ wss.on('connection', (ws, req) => {
 
     ws.on('message', (message) => {
         console.log(`Received from client: ${message}`);
+
+        if (message == "screenshot_uploaded") {
+            console.log(true);
+            isCaptured = true
+        }
+
+
         if (message === '@codeguyakash') {
             console.log('Sending screenshot capture instruction');
             ws.send('capture_screenshot');
@@ -59,6 +86,10 @@ wss.on('connection', (ws, req) => {
     });
     ws.on("screenshot_uploaded", (message) => {
         console.log('Screenshot', message);
+        if (message == "screenshot_uploaded") {
+            isCaptured = true
+            console.log(isCaptured)
+        }
     });
     ws.on("restart_app", (message) => {
         console.log('restart_app', message);
@@ -96,18 +127,51 @@ app.post("/restart_app", async (req, res) => {
 
 
 app.get('/capture_screenshot', async (req, res) => {
+    console.log('Requesting screenshot');
+    isCaptured = false;
     broadcast('capture_screenshot');
 
-    
+    let attempts = 0;
+    const maxAttempts = 20; // Adjust timeout (e.g., 20 x 250ms = 5 seconds)
 
+    const checkCaptured = setInterval(async () => {
+        if (isCaptured) {
+            clearInterval(checkCaptured); // Stop polling
+            try {
+                const file = await getFileAfterUpload();
+                const filePath = `${URL}/uploads/${file}`;
+                console.log(`Returning screenshot: ${filePath}`);
+                return res.status(200).json([{
+                    success: true,
+                    message: 'Screenshot captured successfully',
+                    fileName: file,
+                    thumbnail: filePath,
+                    createdAt: date,
+                    device_name: "Device 1"
 
+                }]);
+            } catch (error) {
+                clearInterval(checkCaptured);
+                console.error('Error getting screenshot:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to retrieve uploaded screenshot',
+                    error: error.message,
+                });
+            }
+        }
 
-
-
-
-
-    res.status(200).json({ message: 'Screenshot capture triggered' });
+        attempts++;
+        if (attempts >= maxAttempts) {
+            clearInterval(checkCaptured);
+            return res.status(408).json({
+                success: false,
+                message: 'Screenshot capture timed out',
+            });
+        }
+    }, 250); // Check every 250ms
 });
+
 
 app.post('/upload', upload.single('file'), (req, res) => {
     try {
